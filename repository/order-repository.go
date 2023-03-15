@@ -43,7 +43,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 	order_master.PaymentMethodId = int64(order.PaymentTypeId)
 
 	res := db.connect.Table("orders").Create(&order_master)
-	if res != nil {
+	if res.RowsAffected > 0 {
 		//print(res.RowsAffected)
 		print(order_master.Id)
 
@@ -57,10 +57,13 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 
 			var line_price float64 = 0
 			var line_total_price float64 = 0
+			var is_free int = 0
 
 			if order.PaymentTypeId != 3 {
 				line_price = data[0].Price
 				line_total_price = line_total
+			} else {
+				is_free = 1
 			}
 
 			var orderdetail entity.OrderDetail
@@ -70,14 +73,14 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 			orderdetail.Qty = data[0].Qty
 			orderdetail.Price = line_price
 			orderdetail.LineTotal = line_total_price
-			orderdetail.PriceGroupId = 1
+			orderdetail.PriceGroupId = int64(data[0].PriceGroupId)
 			orderdetail.Status = 1
 			orderdetail.SalePaymentMethodId = int64(order.PaymentTypeId)
 			orderdetail.IssueRefId = int64(order.IssueId)
-			orderdetail.IsFree = 0
+			orderdetail.IsFree = int64(is_free)
 
 			res2 := db.connect.Table("order_line").Create(&orderdetail)
-			if res2 != nil {
+			if res2.RowsAffected > 0 {
 				if order.PaymentTypeId != 3 {
 					db.AddPayment(uint64(order_master.Id), order.CustomerId, orderdetail.LineTotal, uint64(order.CompanyId), order.BranchId, uint64(orderdetail.SalePaymentMethodId), order.UserId)
 				}

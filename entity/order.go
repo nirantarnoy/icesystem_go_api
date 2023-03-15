@@ -1,10 +1,11 @@
 package entity
 
 type OrderLineStruct struct {
-	OrderId   int     `json:"order_id"`
-	ProductId int     `json:"product_id"`
-	Qty       float64 `json:"qty"`
-	Price     float64 `json:"price"`
+	OrderId      int     `json:"order_id"`
+	ProductId    int     `json:"product_id"`
+	Qty          float64 `json:"qty"`
+	Price        float64 `json:"price"`
+	PriceGroupId int     `json:"price_group_id"`
 }
 
 type OrderCreate struct {
