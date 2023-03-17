@@ -10,7 +10,7 @@ type OrderLineStruct struct {
 type OrderCreateDto struct {
 	CustomerId    uint64            `json:"customer_id" form:"customer_id" binding:"required"`
 	UserId        uint64            `json:"user_id" form:"user_id" binding:"required"`
-	EmpId         uint64            `json:"car_date" form:"emp_id"`
+	EmpId         uint64            `json:"emp_id" form:"emp_id"`
 	EmpId2        uint64            `json:"emp2_id" form:"emp2_id"`
 	RouteId       uint64            `json:"route_id" form:"route_id"`
 	CarId         uint64            `json:"car_id" form:"car_id"`

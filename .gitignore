@@ -1,2 +1,5 @@
+### folder config
 /config
 
+### go build file
+ice_go_api.exe
