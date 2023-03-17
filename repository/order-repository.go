@@ -211,6 +211,7 @@ func (db *orderRepository) GetPayLastNo(company_id uint64, branch_id uint64) str
 	var cnum string = ""
 	// var cnum2 int64 = 8
 	var cnum3 int64 = 0
+	// var prefix2 strings.Builder
 	current_date := time.Now().Local()
 
 	row := db.connect.Table("payment_receive").Where("company_id=?", company_id).Where("branch_id=?", branch_id).Where("date(trans_date)=?", current_date.Format("2006-01-02")).Select("max(journal_no)").Row()
@@ -229,6 +230,7 @@ func (db *orderRepository) GetPayLastNo(company_id uint64, branch_id uint64) str
 	if len(full_day) == 1 {
 		full_day = "0" + full_day
 	}
+	//prefix2.WriteString(pre + full_year[2:len(full_year)] + full_month + full_day + "-")
 	prefix = pre + full_year[2:len(full_year)] + full_month + full_day + "-"
 	cnum = max_journal_no[10:len(max_journal_no)]
 	// cnum = "000"
