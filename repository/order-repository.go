@@ -49,10 +49,10 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 
 		for i := 0; i <= len(data)-1; i++ {
 			//print(data[0].ProductId)
-			if data[0].Qty <= 0 {
+			if data[i].Qty <= 0 {
 				continue
 			}
-			line_total := (data[0].Qty * data[0].Price)
+			line_total := (data[i].Qty * data[i].Price)
 			order_total_amt += line_total
 
 			var line_price float64 = 0
@@ -60,7 +60,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 			var is_free int = 0
 
 			if order.PaymentTypeId != 3 {
-				line_price = data[0].Price
+				line_price = data[i].Price
 				line_total_price = line_total
 			} else {
 				is_free = 1
@@ -69,11 +69,11 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 			var orderdetail entity.OrderDetail
 			orderdetail.OrderId = order_master.Id
 			orderdetail.CustomerId = int64(order.CustomerId)
-			orderdetail.ProductId = int64(data[0].ProductId)
-			orderdetail.Qty = data[0].Qty
+			orderdetail.ProductId = int64(data[i].ProductId)
+			orderdetail.Qty = data[i].Qty
 			orderdetail.Price = line_price
 			orderdetail.LineTotal = line_total_price
-			orderdetail.PriceGroupId = int64(data[0].PriceGroupId)
+			orderdetail.PriceGroupId = int64(data[i].PriceGroupId)
 			orderdetail.Status = 1
 			orderdetail.SalePaymentMethodId = int64(order.PaymentTypeId)
 			orderdetail.IssueRefId = int64(order.IssueId)
@@ -84,7 +84,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 				if order.PaymentTypeId != 3 {
 					db.AddPayment(uint64(order_master.Id), order.CustomerId, orderdetail.LineTotal, uint64(order.CompanyId), order.BranchId, uint64(orderdetail.SalePaymentMethodId), order.UserId)
 				}
-				db.UpdateStock(order.RouteId, uint64(data[0].ProductId), data[0].Qty)
+				db.UpdateStock(order.RouteId, uint64(data[i].ProductId), data[i].Qty)
 			}
 		}
 		if order_total_amt > 0 {
@@ -102,7 +102,8 @@ type SelectedData struct {
 
 func (db *orderRepository) UpdateStock(route_id uint64, product_id uint64, qty float64) {
 	var selectedData SelectedData
-	res := db.connect.Table("order_stock").Where("route_id =?", route_id).Where("product_id = ?", product_id).Where("avl_qty >= ?", qty).Where("order_id = 202653").Select("id,product_id,avl_qty").Scan(&selectedData)
+	//	res := db.connect.Table("order_stock").Where("route_id =?", route_id).Where("product_id = ?", product_id).Where("avl_qty >= ?", qty).Where("order_id = 202653").Select("id,product_id,avl_qty").Scan(&selectedData)
+	res := db.connect.Table("order_stock").Where("route_id =?", route_id).Where("product_id = ?", product_id).Where("avl_qty >= ?", qty).Select("id,product_id,avl_qty").Scan(&selectedData)
 	if res.Error == nil {
 		res_update := db.connect.Table("order_stock").Where("id=?", selectedData.Id).Update("avl_qty", (selectedData.AvlQty - qty))
 		if res_update.Error == nil {
