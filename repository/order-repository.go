@@ -115,14 +115,18 @@ func (db *orderRepository) UpdateStock(route_id uint64, product_id uint64, qty f
 
 func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amount float64, company_id uint64, branch_id uint64, payment_type_id uint64, user_id uint64) {
 	var findone uint64 = 0
+	var pay_amount float64 = 0
 	current_date := time.Now().Local()
 
 	recid := db.connect.Table("payment_receive").Where("customer_id = ?", customer_id).Where("date(trans_date) = ?", current_date.Format("2006-01-02")).Select("id").Take(&findone)
 	if recid != nil {
+		if payment_type_id == 1 {
+			pay_amount = amount
+		}
 		print("not error but not found record")
 		if findone > 0 {
 			print("has old payment data")
-			res_save_detail := db.connect.Table("payment_receive_line").Create(map[string]interface{}{"payment_receive_id": findone, "order_id": order_id, "payment_amount": amount, "payment_channel_id": 1, "payment_method_id": payment_type_id, "status": 1, "payment_type_id": payment_type_id})
+			res_save_detail := db.connect.Table("payment_receive_line").Create(map[string]interface{}{"payment_receive_id": findone, "order_id": order_id, "payment_amount": pay_amount, "payment_channel_id": 1, "payment_method_id": payment_type_id, "status": 1, "payment_type_id": payment_type_id})
 			if res_save_detail.Error == nil {
 				print("create payment has old")
 			}
@@ -142,7 +146,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 			if payment.JournalNo != "error na ja" {
 				res := db.connect.Table("payment_receive").Create(&payment)
 				if res.Error == nil {
-					res_save_detail := db.connect.Table("payment_receive_line").Create(map[string]interface{}{"payment_receive_id": payment.Id, "order_id": order_id, "payment_amount": amount, "payment_channel_id": 1, "payment_method_id": payment_type_id, "status": 1, "payment_type_id": payment_type_id})
+					res_save_detail := db.connect.Table("payment_receive_line").Create(map[string]interface{}{"payment_receive_id": payment.Id, "order_id": order_id, "payment_amount": pay_amount, "payment_channel_id": 1, "payment_method_id": payment_type_id, "status": 1, "payment_type_id": payment_type_id})
 					if res_save_detail.Error == nil {
 						print("create payment")
 					}
