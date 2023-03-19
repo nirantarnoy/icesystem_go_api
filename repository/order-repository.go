@@ -18,12 +18,12 @@ type orderRepository struct {
 }
 
 func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCreate {
-	order.RunNo = db.GetLastNo(order.CompanyId, order.BranchId, order.RouteId, order.RouteCode)
+	//order.RunNo = db.GetLastNo(order.CompanyId, order.BranchId, order.RouteId, order.RouteCode)
 	var data []entity.OrderLineStruct = order.DataList
 	var order_master entity.OrderMaster
 	var order_total_amt float64 = 0
 
-	order_master.OrderNo = order.RunNo
+	order_master.OrderNo = order.OrderNo
 	order_master.OrderDate = time.Now()
 	order_master.CustomerId = 0
 	order_master.OrderChannelId = int64(order.RouteId)

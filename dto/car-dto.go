@@ -22,4 +22,5 @@ type OrderCreateDto struct {
 	RouteCode     string            `json:"route_code"`
 	RunNo         string            `json:"runno"`
 	IssueId       uint64            `json:"issue_id"`
+	OrderNo       string            `json:"order_no"`
 }
