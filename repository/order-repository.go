@@ -42,7 +42,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 	order_master.DiscountAmt = order.Discount
 	order_master.PaymentMethodId = int64(order.PaymentTypeId)
 
-	res := db.connect.Table("orders").Create(&order_master)
+	res := db.connect.Table("orders").Create(&order_master) // save and return id
 	if res.RowsAffected > 0 {
 		//print(res.RowsAffected)
 		print(order_master.Id)
