@@ -12,10 +12,32 @@ import (
 type OrderController interface {
 	CreateOrder(ctx *gin.Context)
 	GetLastNo(ctx *gin.Context)
+	CloseOrder(ctx *gin.Context)
 }
 type orderController struct {
 	OrderService service.OrderService
 	jwtService   service.JWTService
+}
+
+// CloseOrder implements OrderController
+func (db *orderController) CloseOrder(ctx *gin.Context) {
+	var OrderCloseDto dto.OrderColseDto
+	errDto := ctx.ShouldBind(&OrderCloseDto)
+	if errDto != nil {
+		fmt.Printf("%v", errDto)
+		res := "Fail to process"
+		ctx.JSON(http.StatusBadRequest, res)
+	} else {
+		// authHeader := ctx.GetHeader("Authorization")
+		// userId := db.getUserIdByToken(authHeader)
+		// convertUserId, err := strconv.ParseUint(userId, 10, 64)
+
+		// if err == nil {
+		// 	OrderDto.CreatedBy = convertUserId
+		// }
+		res := db.OrderService.CloseOrder(OrderCloseDto)
+		ctx.JSON(http.StatusCreated, res)
+	}
 }
 
 // GetLastNo implements OrderController

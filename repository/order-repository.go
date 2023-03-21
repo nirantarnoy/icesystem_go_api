@@ -10,6 +10,7 @@ import (
 
 type OrderRepository interface {
 	CreateOrder(order entity.OrderCreate) entity.OrderCreate
+	CloseOrder(order entity.OrderClose) entity.OrderClose
 	GetLastNo(company_id uint64, branch_id uint64, route_id uint64, route_code string) string
 }
 
@@ -17,11 +18,18 @@ type orderRepository struct {
 	connect *gorm.DB
 }
 
+// CloseOrder implements OrderRepository
+func (*orderRepository) CloseOrder(order entity.OrderClose) entity.OrderClose {
+	var orderclose entity.OrderClose
+
+	return orderclose
+}
+
 func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCreate {
 	//order.RunNo = db.GetLastNo(order.CompanyId, order.BranchId, order.RouteId, order.RouteCode)
 	var data []entity.OrderLineStruct = order.DataList
 	var order_master entity.OrderMaster
-	var order_total_amt float64 = 0
+	//var order_total_amt float64 = 0
 
 	order_master.OrderNo = order.OrderNo
 	order_master.OrderDate = time.Now()
@@ -41,6 +49,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 	order_master.OrderShift = 0
 	order_master.DiscountAmt = order.Discount
 	order_master.PaymentMethodId = int64(order.PaymentTypeId)
+	order_master.OrderTotalAmt = order.OrderTotalAmount
 
 	res := db.connect.Table("orders").Create(&order_master) // save and return id
 	if res.RowsAffected > 0 {
@@ -53,16 +62,13 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 				continue
 			}
 			line_total := (data[i].Qty * data[i].Price)
-			order_total_amt += line_total
+			//order_total_amt += line_total
 
-			var line_price float64 = 0
-			var line_total_price float64 = 0
+			// var line_price float64 = 0
+			// var line_total_price float64 = 0
 			var is_free int = 0
 
-			if order.PaymentTypeId != 3 {
-				line_price = data[i].Price
-				line_total_price = line_total
-			} else {
+			if order.PaymentTypeId == 3 {
 				is_free = 1
 			}
 
@@ -71,8 +77,8 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 			orderdetail.CustomerId = int64(order.CustomerId)
 			orderdetail.ProductId = int64(data[i].ProductId)
 			orderdetail.Qty = data[i].Qty
-			orderdetail.Price = line_price
-			orderdetail.LineTotal = line_total_price
+			orderdetail.Price = data[i].Price
+			orderdetail.LineTotal = line_total
 			orderdetail.PriceGroupId = int64(data[i].PriceGroupId)
 			orderdetail.Status = 1
 			orderdetail.SalePaymentMethodId = int64(order.PaymentTypeId)
@@ -87,9 +93,9 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 				db.UpdateStock(order.RouteId, uint64(data[i].ProductId), data[i].Qty)
 			}
 		}
-		if order_total_amt > 0 {
-			db.connect.Table("orders").Where("id = ?", order_master.Id).Update("order_total_amt", order_total_amt)
-		}
+		// if order_total_amt > 0 {
+		// 	db.connect.Table("orders").Where("id = ?", order_master.Id).Update("order_total_amt", order_total_amt)
+		// }
 	}
 	return order
 }

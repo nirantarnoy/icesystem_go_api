@@ -23,4 +23,5 @@ type OrderMaster struct {
 	DiscountAmt     float64   `json:"discount_amt"`
 	PaymentMethodId int64     `json:"payment_method_id"`
 	PaymentStatus   int64     `json:"payment_status"`
+	OrderTotalAmt   float64   `json:"order_total_amt"`
 }

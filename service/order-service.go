@@ -11,10 +11,22 @@ import (
 
 type OrderService interface {
 	CreateOrder(oderDto dto.OrderCreateDto) entity.OrderCreate
+	CloseOrder(oderCloseDto dto.OrderColseDto) entity.OrderClose
 	GetLastNo() string
 }
 type orderService struct {
 	orderRepository repository.OrderRepository
+}
+
+// CloseOrder implements OrderService
+func (db *orderService) CloseOrder(oderCloseDto dto.OrderColseDto) entity.OrderClose {
+	orderclose := entity.OrderClose{}
+	err := smapping.FillStruct(&orderclose, smapping.MapFields(&oderCloseDto))
+	if err != nil {
+		log.Fatalf("Fail to mapping %v", err)
+	}
+	res := db.orderRepository.CloseOrder(orderclose)
+	return res
 }
 
 // GetLastNo implements OrderService

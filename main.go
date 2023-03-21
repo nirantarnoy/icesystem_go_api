@@ -65,6 +65,7 @@ func main() {
 	{
 		orderRoute.POST("/addorder", orderController.CreateOrder)
 		orderRoute.GET("/getlastno", orderController.GetLastNo)
+		orderRoute.POST("/closeorder", orderController.CloseOrder)
 		// orderRoute.GET("/listorderbyemp/:id", orderController.ListorderByEmpId)
 		// orderRoute.POST("/closeorder", orderController.Closeorder)
 		// orderRoute.POST("/listorderopen/:id", orderController.ListorderOpen)
