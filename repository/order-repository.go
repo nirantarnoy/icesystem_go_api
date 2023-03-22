@@ -357,6 +357,7 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 	defaultWarehouse := db.getDefaultWh(int64(order.CompanyId), int64(order.BranchId))
 
 	if order.IsReturnStock == 1 {
+		var update_count int = 0
 		for i := 0; i <= len(orderStockQty)-1; i++ {
 			if orderStockQty[i].AvlQty <= 0 {
 				continue
@@ -379,22 +380,27 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 			if trans.RowsAffected > 0 {
 				if 1 > 0 {
 					res_update_sum = db.updateSummary(orderStockQty[i].ProductId, uint64(defaultWarehouse), orderStockQty[i].AvlQty, order.CompanyId, order.BranchId)
+					if res_update_sum == true {
+						update_count += 1
+					}
 				} else {
 					res_update_boot_sum = db.updateBootSummary(orderStockQty[i].ProductId, order.UserId, order.RouteId, orderStockQty[i].AvlQty, order.CompanyId, order.BranchId)
-				}
-
-				if res_update_sum == true || res_update_boot_sum == true {
-					// update orders
-					res_order_update := db.connect.Table("orders").Where("order_channel_id=? and date(order_date) =? and sale_from_mobile=1", order.RouteId, current_date.Format("2006-01-02")).Updates(map[string]interface{}{"status": 100, "order_shift": 0})
-					if res_order_update.RowsAffected > 0 {
-						resData += 1
-					}
-					// update order stock
-					res_stock_update := db.connect.Table("order_stock").Where("route_id=? and date(trans_date)=?", order.RouteId, current_date.Format("2006-01-02")).Update("avl_qty", 0)
-					if res_stock_update.RowsAffected > 0 {
-						resData += 1
+					if res_update_boot_sum == true {
+						update_count += 1
 					}
 				}
+			}
+		}
+		if update_count > 0 {
+			// update orders
+			res_order_update := db.connect.Table("orders").Where("order_channel_id=? and date(order_date) =? and sale_from_mobile=1", order.RouteId, current_date.Format("2006-01-02")).Updates(map[string]interface{}{"status": 100, "order_shift": 0})
+			if res_order_update.RowsAffected > 0 {
+				resData += 1
+			}
+			// update order stock
+			res_stock_update := db.connect.Table("order_stock").Where("route_id=? and date(trans_date)=?", order.RouteId, current_date.Format("2006-01-02")).Update("avl_qty", 0)
+			if res_stock_update.RowsAffected > 0 {
+				resData += 1
 			}
 		}
 	} else {
