@@ -11,7 +11,7 @@ import (
 
 type OrderService interface {
 	CreateOrder(oderDto dto.OrderCreateDto) entity.OrderCreate
-	CloseOrder(oderCloseDto dto.OrderColseDto) entity.OrderClose
+	CloseOrder(oderCloseDto dto.OrderColseDto) int
 	GetLastNo() string
 }
 type orderService struct {
@@ -19,7 +19,7 @@ type orderService struct {
 }
 
 // CloseOrder implements OrderService
-func (db *orderService) CloseOrder(oderCloseDto dto.OrderColseDto) entity.OrderClose {
+func (db *orderService) CloseOrder(oderCloseDto dto.OrderColseDto) int {
 	orderclose := entity.OrderClose{}
 	err := smapping.FillStruct(&orderclose, smapping.MapFields(&oderCloseDto))
 	if err != nil {
