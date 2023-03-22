@@ -359,9 +359,9 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 	if order.IsReturnStock == 1 {
 		var update_count int = 0
 		for i := 0; i <= len(orderStockQty)-1; i++ {
-			if orderStockQty[i].AvlQty <= 0 {
-				continue
-			}
+			// if orderStockQty[i].AvlQty <= 0 {
+			// 	continue
+			// }
 			var stockTrans StockTrans
 			stockTrans.JournalNo = db.GetReturnLastNo(order.CompanyId, order.BranchId)
 			stockTrans.TransDate = time.Now().Local()
@@ -376,20 +376,25 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 			stockTrans.CreatedBy = order.UserId
 			stockTrans.CreatedAt = uint64(time.Now().Unix())
 
-			trans := db.connect.Table("stock_trans").Create(&stockTrans)
-			if trans.RowsAffected > 0 {
-				if 1 > 0 {
-					res_update_sum = db.updateSummary(orderStockQty[i].ProductId, uint64(defaultWarehouse), orderStockQty[i].AvlQty, order.CompanyId, order.BranchId)
-					if res_update_sum == true {
-						update_count += 1
-					}
-				} else {
-					res_update_boot_sum = db.updateBootSummary(orderStockQty[i].ProductId, order.UserId, order.RouteId, orderStockQty[i].AvlQty, order.CompanyId, order.BranchId)
-					if res_update_boot_sum == true {
-						update_count += 1
+			if orderStockQty[i].AvlQty > 0 {
+				trans := db.connect.Table("stock_trans").Create(&stockTrans)
+				if trans.RowsAffected > 0 {
+					if order.IsReturnStock == 1 {
+						res_update_sum = db.updateSummary(orderStockQty[i].ProductId, uint64(defaultWarehouse), orderStockQty[i].AvlQty, order.CompanyId, order.BranchId)
+						if res_update_sum == true {
+							update_count += 1
+						}
+					} else {
+						res_update_boot_sum = db.updateBootSummary(orderStockQty[i].ProductId, order.UserId, order.RouteId, orderStockQty[i].AvlQty, order.CompanyId, order.BranchId)
+						if res_update_boot_sum == true {
+							update_count += 1
+						}
 					}
 				}
+			} else {
+				update_count += 1
 			}
+
 		}
 		if update_count > 0 {
 			// update orders
@@ -406,9 +411,9 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 	} else {
 		var update_count int = 0
 		for i := 0; i <= len(orderStockQty)-1; i++ {
-			if orderStockQty[i].AvlQty <= 0 {
-				continue
-			}
+			// if orderStockQty[i].AvlQty <= 0 {
+			// 	continue
+			// }
 			// 	var stockTrans StockTrans
 			// 	stockTrans.JournalNo = db.GetReturnLastNo(order.CompanyId, order.BranchId)
 			// 	stockTrans.TransDate = time.Now().Local()
