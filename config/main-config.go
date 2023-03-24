@@ -21,15 +21,21 @@ var (
 		db[0], db[1])
 )
 
+// type SqlLogger struct {
+// 	logger.Interface
+// }
+
 func SetupDB() *gorm.DB {
 	db, err := gorm.Open(mysql.Open(dsn1), &gorm.Config{
 		SkipDefaultTransaction: true,
 		PrepareStmt:            true,
+		// DryRun: true,
+		//Logger:                 &SqlLogger{},
 	})
 	if err != nil {
 		panic("Failed to Connect Database")
 	}
-
+	//  db.Migrator().CreateTable(User{})
 	return db
 }
 

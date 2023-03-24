@@ -51,7 +51,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 	res := db.connect.Table("orders").Create(&order_master) // save and return id
 	if res.RowsAffected > 0 {
 		//print(res.RowsAffected)
-		print(order_master.Id)
+		//print(order_master.Id)
 
 		for i := 0; i <= len(data)-1; i++ {
 			//print(data[0].ProductId)
@@ -128,7 +128,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 		if payment_type_id == 1 {
 			pay_amount = amount
 		}
-		print("not error but not found record")
+		println("not error but not found record")
 		if findone > 0 {
 			print("has old payment data")
 			res_save_detail := db.connect.Table("payment_receive_line").Create(map[string]interface{}{"payment_receive_id": findone, "order_id": order_id, "payment_amount": pay_amount, "payment_channel_id": 1, "payment_method_id": payment_type_id, "status": 1, "payment_type_id": payment_type_id})
