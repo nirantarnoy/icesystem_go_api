@@ -468,7 +468,8 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 		params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
 		params.Add("user_id", strconv.Itoa(int(order.UserId)))
 
-		resp, err := http.PostForm("http://103.253.73.108/icesystem/frontend/web/api/order/createnotifyclose", params)
+		//resp, err := http.PostForm("http://103.253.73.108/icesystem/frontend/web/api/order/createnotifyclose", params) // NKY
+		resp, err := http.PostForm("http://141.98.16.4/icesystem/frontend/web/api/order/createnotifyclose", params) // BKT
 		if err != nil {
 			panic("api error")
 		}
