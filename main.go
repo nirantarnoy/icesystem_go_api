@@ -24,6 +24,10 @@ var (
 	orderRepository repository.OrderRepository = repository.NewOrderRepository(db)
 	orderService    service.OrderService       = service.NewOrderService(orderRepository)
 	orderController controller.OrderController = controller.NewOrderController(orderService, jwtService)
+
+	posCloseRepository repository.PosCloseRepository = repository.NewPosCloseRepository(db)
+	posCloseService    service.PosCloseService       = service.NewPosCloseService(posCloseRepository)
+	posCloseController controller.PoscloseController = controller.NewPosCloseController(posCloseService)
 )
 
 func main() {
@@ -36,7 +40,7 @@ func main() {
 	corsConfig.AllowAllOrigins = true
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT"}
 	corsConfig.AllowHeaders = []string{"Content-Type", "Authorization"}
-	//corsConfig.AllowHeaders = []string{"Content-Type", "application/json"}
+	// corsConfig.AllowHeaders = []string{"Content-Type", "application/json"}
 	corsConfig.AllowCredentials = true
 	server.Use(cors.New(corsConfig))
 
@@ -72,6 +76,11 @@ func main() {
 		// orderRoute.GET("/getorderphoto/:id", orderController.GetorderPhoto)
 		// orderRoute.GET("/getorderclosephoto/:id", orderController.GetorderClosePhoto)
 
+	}
+
+	poscloseRoute := server.Group("api/pos")
+	{
+		poscloseRoute.POST("/posclose", posCloseController.PosClose)
 	}
 
 	server.Run(":1223")
