@@ -60,7 +60,7 @@ func (db *posCloseRepository) CloseOrder(closeData entity.PosCloseData) entity.P
 	//return int64(closeData.PosList[0].ProductId)
 
 	time_start := time.Now()
-	posHeader.OrderNo = "" //db.GetOrderNo(closeData.CompanyID, closeData.BranchId)
+	posHeader.OrderNo = db.GetOrderNo(closeData.CompanyID, closeData.BranchId)
 	posHeader.OrderDate = time.Now().Local()
 	posHeader.CustomerId = closeData.CustomerId
 	posHeader.SaleChannelId = 2
