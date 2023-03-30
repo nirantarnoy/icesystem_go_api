@@ -65,7 +65,7 @@ func (db *posCloseRepository) CloseOrder(closeData entity.PosCloseData) entity.P
 	posHeader.CustomerId = closeData.CustomerId
 	posHeader.SaleChannelId = 2
 	posHeader.PaymentStatus = 0
-	posHeader.OrderTotalAmt = (closeData.SalePayAmount)
+	posHeader.OrderTotalAmt = (closeData.SaleTotalAmount)
 	posHeader.Status = 1
 	posHeader.CompanyId = closeData.CompanyID
 	posHeader.BranchId = closeData.BranchId
