@@ -14,10 +14,32 @@ type OrderRepository interface {
 	CreateOrder(order entity.OrderCreate) entity.OrderCreate
 	CloseOrder(order entity.OrderClose) int
 	GetLastNo(company_id uint64, branch_id uint64, route_id uint64, route_code string) string
+	CustomerOrder(customerOrder entity.OrderCustomer) entity.OrderList
 }
 
 type orderRepository struct {
 	connect *gorm.DB
+}
+
+// CustomerOrder implements OrderRepository
+func (db *orderRepository) CustomerOrder(customerOrder entity.OrderCustomer) entity.OrderList {
+	var orderlist entity.OrderList
+	current_date := time.Now().Local()
+	if customerOrder.CarId > 0 {
+		if customerOrder.SearchCustomer > 0 {
+			res := db.connect.Table("query_api_order_daily_summary_new").Where("car_ref_id=? and date(order_date)=? and customer_id=? status=1 ", customerOrder.CarId, current_date.Format("2006-01-02"), customerOrder.SearchCustomer).Scan(&orderlist)
+			if res.Error != nil {
+				return orderlist
+			}
+		} else {
+			res := db.connect.Table("query_api_order_daily_summary_new").Where("car_ref_id=? and date(order_date)=? and status=1 ", customerOrder.CarId, current_date.Format("2006-01-02")).Scan(&orderlist)
+			if res.Error != nil {
+				return orderlist
+			}
+		}
+
+	}
+	return orderlist
 }
 
 func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCreate {

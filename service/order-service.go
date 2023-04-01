@@ -13,9 +13,21 @@ type OrderService interface {
 	CreateOrder(oderDto dto.OrderCreateDto) entity.OrderCreate
 	CloseOrder(oderCloseDto dto.OrderColseDto) int
 	GetLastNo() string
+	CustomerOrder(customerOrder dto.OrderList) entity.OrderList
 }
 type orderService struct {
 	orderRepository repository.OrderRepository
+}
+
+// CustomerOrder implements OrderService
+func (db *orderService) CustomerOrder(customerOrderDto dto.OrderList) entity.OrderList {
+	orderCustomer := entity.OrderCustomer{}
+	err := smapping.FillStruct(&orderCustomer, smapping.MapFields(&customerOrderDto))
+	if err != nil {
+		log.Fatalf("Fail to mapping %v", err)
+	}
+	res := db.orderRepository.CustomerOrder(orderCustomer)
+	return res
 }
 
 // CloseOrder implements OrderService

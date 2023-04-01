@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"tarlek.com/icesystem/dto"
+	"tarlek.com/icesystem/entity"
 	"tarlek.com/icesystem/service"
 )
 
@@ -13,10 +14,43 @@ type OrderController interface {
 	CreateOrder(ctx *gin.Context)
 	GetLastNo(ctx *gin.Context)
 	CloseOrder(ctx *gin.Context)
+	CustomerOrder(ctx *gin.Context)
 }
 type orderController struct {
 	OrderService service.OrderService
 	jwtService   service.JWTService
+}
+
+type orderListResult struct {
+	Status uint64           `json:"status"`
+	Data   entity.OrderList `json:"data"`
+}
+
+// CustomerOrder implements OrderController
+func (db *orderController) CustomerOrder(ctx *gin.Context) {
+	var orderListDto dto.OrderList
+	var result orderListResult
+	errDro := ctx.ShouldBind(&orderListDto)
+	if errDro != nil {
+		fmt.Printf("%v", errDro)
+		//res := "Cannot bind parameters"
+		result.Status = 0
+		result.Data = entity.OrderList{}
+		ctx.JSON(http.StatusBadRequest, result)
+	} else {
+		if orderListDto.CarId < 1 {
+			//res := "Not have data paremeter"
+			result.Status = 0
+			result.Data = entity.OrderList{}
+			ctx.JSON(http.StatusBadRequest, result)
+		} else {
+			res := db.OrderService.CustomerOrder(orderListDto)
+			result.Status = 0
+			result.Data = res
+			ctx.JSON(http.StatusOK, result)
+		}
+	}
+
 }
 
 // CloseOrder implements OrderController
