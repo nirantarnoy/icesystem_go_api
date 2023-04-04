@@ -19,6 +19,6 @@ type OrderList struct {
 	ProductId           uint64    `json:"product_id" form:"product_id"`
 	ProductCode         string    `json:"product_code" form:"product_code"`
 	ProductName         string    `json:"product_name" form:"product_name"`
-	OrderLineDate       time.Time `json:"order_line_date" form:"order_line_date"`
+	OrderLineDate       time.Time `json:"order_line_date" form:"created_at"`
 	OrderLineStatus     uint64    `json:"order_line_status" form:"order_line_status"`
 }
