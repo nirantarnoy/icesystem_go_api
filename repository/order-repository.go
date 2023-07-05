@@ -490,7 +490,7 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 		params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
 		params.Add("user_id", strconv.Itoa(int(order.UserId)))
 
-		resp, err := http.PostForm("http://203.156.30.38/icesystem/frontend/web/api/order/createnotifyclose", params) // NKY
+		resp, err := http.PostForm("http://141.98.19.240/icesystem/frontend/web/api/order/createnotifyclose", params) // NKY
 		//resp, err := http.PostForm("http://103.253.73.108/icesystem/frontend/web/api/order/createnotifyclose", params) // NKY
 		//resp, err := http.PostForm("http://141.98.16.4/icesystem/frontend/web/api/order/createnotifyclose", params) // BKT
 		if err != nil {
@@ -504,7 +504,7 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 }
 
 func (db *orderRepository) getDefaultWh(company_id int64, branch_id int64) int {
-	default_wh := 0
+	default_wh := 12
 	res := db.connect.Table("warehouse").Where("is_reprocess = 1 and company_id = ? and branch_id = ?", company_id, branch_id).Select("id").Scan(&default_wh)
 	if res.Error != nil {
 

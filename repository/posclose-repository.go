@@ -129,7 +129,6 @@ func (db *posCloseRepository) CloseOrder(closeData entity.PosCloseData) entity.P
 							payment_success = 1
 						}
 					}
-
 				}
 			}
 		}
