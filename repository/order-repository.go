@@ -544,7 +544,7 @@ type SaleRouteDailyClose2 struct {
 	OrderShift uint64  `json:"order_shift"`
 }
 
-func (db *orderRepository) updateSummary(product_id uint64, warehouse_id uint64, qty float64, company_id uint64, branch_id uint64) bool {
+func (db *orderRepository) updateSummary(product_id uint64, warehouse_id uint64, return_qty float64, company_id uint64, branch_id uint64) bool {
 	var old_qty StockSumData
 	var new_stock StockSumDataNew
 	var is_update bool = false
@@ -554,14 +554,20 @@ func (db *orderRepository) updateSummary(product_id uint64, warehouse_id uint64,
 
 	}
 	if old_qty.Id > 0 {
-		resupdate := db.connect.Table("stock_sum").Where("id=?", old_qty.Id).Update("qty", (qty + old_qty.Qty))
+		var onhand_qty float64 = 0
+		var final_qty float64 = 0
+		if old_qty.Qty >= 0 {
+			onhand_qty = old_qty.Qty
+		}
+		final_qty = (return_qty + onhand_qty)
+		resupdate := db.connect.Table("stock_sum").Where("id=?", old_qty.Id).Update("qty", final_qty)
 		if resupdate.RowsAffected > 0 {
 			is_update = true
 		}
 	} else {
 		new_stock.WarehouseId = warehouse_id
 		new_stock.ProductId = product_id
-		new_stock.Qty = qty
+		new_stock.Qty = return_qty
 		new_stock.CompanyId = company_id
 		new_stock.BranchId = branch_id
 
