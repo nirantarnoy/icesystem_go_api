@@ -46,7 +46,12 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 	//order.RunNo = db.GetLastNo(order.CompanyId, order.BranchId, order.RouteId, order.RouteCode)
 	var data []entity.OrderLineStruct = order.DataList
 	var order_master entity.OrderMaster
+	var shift_number = 0
 	//var order_total_amt float64 = 0
+	convert_shift, err := strconv.ParseUint(order.LoginShift, 10, 32)
+	if err == nil {
+		shift_number = int(convert_shift)
+	}
 
 	order_master.OrderNo = order.OrderNo
 	order_master.OrderDate = time.Now()
@@ -63,7 +68,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 	order_master.Emp_1 = int64(order.EmpId)
 	order_master.Emp_2 = int64(order.EmpId2)
 	order_master.OrderDate2 = time.Now()
-	order_master.OrderShift = 0
+	order_master.OrderShift = int64(shift_number)
 	order_master.DiscountAmt = order.Discount
 	order_master.PaymentMethodId = int64(order.PaymentTypeId)
 	order_master.OrderTotalAmt = order.OrderTotalAmount
@@ -192,6 +197,11 @@ type MaxOrderNo struct {
 	OrderNo string `json:"order_no"`
 }
 
+type MaxOrderNoNew struct {
+	Id     uint64 `json:"id"`
+	LastNo string `json:"last_no"`
+}
+
 func (db *orderRepository) GetLastNo(company_id uint64, branch_id uint64, route_id uint64, route_code string) string {
 	var max_order_no MaxOrderNo
 	var pre string = "CO-" + route_code
@@ -258,6 +268,92 @@ func (db *orderRepository) GetLastNo(company_id uint64, branch_id uint64, route_
 			full_day = "0" + full_day
 		}
 		prefix = pre + "-" + full_year[2:len(full_year)] + full_month + full_day + "-" + "0001"
+	}
+
+	return prefix
+}
+
+func (db *orderRepository) GetLastNoNew(company_id uint64, branch_id uint64, route_id uint64, route_code string) string {
+	var max_order_no MaxOrderNoNew
+	var pre string = "CO-" + route_code
+	var prefix string = ""
+	var cnum string = ""
+	// var cnum2 int64 = 8
+	var cnum3 int64 = 0
+	//current_date := time.Now().Local()
+
+	// row := db.connect.Table("orders").Where("company_id=?", company_id).Where("branch_id=?", branch_id).Where("order_channel_id=?", route_id).Where("sale_from_mobile=1").Where("order_no LIKE ?", "CO%").Select("max(order_no)").Row()
+	// err := row.Scan(&max_order_no)
+	// if err != nil {
+	// 	return "error na ja"
+	// }
+	row := db.connect.Table("sequence_order_trans").Where("route_id=?", route_id).Where("order_type_id=1").Last(&max_order_no)
+	if row.Error != nil {
+		//return "error na ja"
+	}
+	// if row.Error != nil {
+	// 	print("error na")
+	// }
+
+	if max_order_no.LastNo != "" {
+		//max_order_no = "CO-VP31-230314-0009"
+		var full_year string = strconv.Itoa(time.Now().Year())
+		var full_month string = strconv.Itoa(int(time.Now().Month()))
+		if len(full_month) == 1 {
+			full_month = "0" + full_month
+		}
+		var full_day string = strconv.Itoa(time.Now().Day())
+		if len(full_day) == 1 {
+			full_day = "0" + full_day
+		}
+		prefix = pre + "-" + full_year[2:len(full_year)] + full_month + full_day + "-"
+		cnum = max_order_no.LastNo[15:len(max_order_no.LastNo)]
+		// cnum = "000"
+		if cnumx, err := strconv.ParseInt(cnum, 10, 64); err != nil {
+			panic(err)
+		} else {
+			//print("okk")
+			cnum3 = cnumx + 1
+			// cnum2 = cnumx
+		}
+		//cnum3 = cnum2 + 1
+
+		var strlen int = len(cnum)
+		var clen int = len(strconv.Itoa(int(cnum3)))
+		var loop int = strlen - clen
+
+		for i := 0; i <= loop-1; i++ {
+			prefix = prefix + "0"
+		}
+		prefix = prefix + strconv.Itoa(int(cnum3))
+
+		//return strconv.Itoa(int(cnum2))
+
+		// update new order no
+
+		res_update_lastno := db.connect.Table("sequence_order_trans").Where("id=?", max_order_no.Id).Update("last_no", (prefix))
+		if res_update_lastno.Error == nil {
+			print("update last no ok")
+			// print(selectedData.ProductId)
+		}
+
+	} else {
+		var full_year string = strconv.Itoa(time.Now().Year())
+		var full_month string = strconv.Itoa(int(time.Now().Month()))
+		if len(full_month) == 1 {
+			full_month = "0" + full_month
+		}
+		var full_day string = strconv.Itoa(time.Now().Day())
+		if len(full_day) == 1 {
+			full_day = "0" + full_day
+		}
+		prefix = pre + "-" + full_year[2:len(full_year)] + full_month + full_day + "-" + "0001"
+
+		/// create new last no
+		res_save_new_last_no := db.connect.Table("sequence_order_trans").Create(map[string]interface{}{"order_type_id": 1, "route_id": route_id, "last_no": prefix})
+		if res_save_new_last_no.Error == nil {
+			print("create new last no")
+		}
 	}
 
 	return prefix
@@ -490,9 +586,9 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 		params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
 		params.Add("user_id", strconv.Itoa(int(order.UserId)))
 
-		resp, err := http.PostForm("http://141.98.19.240/icesystem/frontend/web/api/order/createnotifyclose", params) // NKY
+		//resp, err := http.PostForm("http://141.98.19.240/icesystem/frontend/web/api/order/createnotifyclose", params) // NKY
 		//resp, err := http.PostForm("http://103.253.73.108/icesystem/frontend/web/api/order/createnotifyclose", params) // NKY
-		//resp, err := http.PostForm("http://141.98.16.4/icesystem/frontend/web/api/order/createnotifyclose", params) // BKT
+		resp, err := http.PostForm("http://141.98.16.4/icesystem/frontend/web/api/order/createnotifyclose", params) // BKT
 		if err != nil {
 			panic("api error")
 		}
