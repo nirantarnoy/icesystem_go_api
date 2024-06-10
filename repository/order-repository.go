@@ -47,13 +47,15 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 	var data []entity.OrderLineStruct = order.DataList
 	var order_master entity.OrderMaster
 	var shift_number = 0
+	var order_no_new = db.GetLastNo(order.CompanyId, order.BranchId, order.RouteId, order.RouteCode)
 	//var order_total_amt float64 = 0
 	convert_shift, err := strconv.ParseUint(order.LoginShift, 10, 32)
 	if err == nil {
 		shift_number = int(convert_shift)
 	}
 
-	order_master.OrderNo = order.OrderNo
+	//order_master.OrderNo = order.OrderNo
+	order_master.OrderNo = order_no_new
 	order_master.OrderDate = time.Now()
 	order_master.CustomerId = 0
 	order_master.OrderChannelId = int64(order.RouteId)
