@@ -1,8 +1,17 @@
 package repository
 
 import (
+	"bytes"
+	"encoding/base64"
+	"fmt"
+	"io"
+	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -114,7 +123,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 			res2 := db.connect.Table("order_line").Create(&orderdetail)
 			if res2.RowsAffected > 0 {
 				if order.PaymentTypeId != 3 {
-					db.AddPayment(uint64(order_master.Id), order.CustomerId, orderdetail.LineTotal, uint64(order.CompanyId), order.BranchId, uint64(orderdetail.SalePaymentMethodId), order.UserId)
+					db.AddPayment(uint64(order_master.Id), order.CustomerId, orderdetail.LineTotal, uint64(order.CompanyId), order.BranchId, uint64(orderdetail.SalePaymentMethodId), order.UserId, order.Image)
 				}
 				db.UpdateStock(order.RouteId, uint64(data[i].ProductId), data[i].Qty)
 			}
@@ -147,10 +156,54 @@ func (db *orderRepository) UpdateStock(route_id uint64, product_id uint64, qty f
 	}
 }
 
-func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amount float64, company_id uint64, branch_id uint64, payment_type_id uint64, user_id uint64) {
+func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amount float64, company_id uint64, branch_id uint64, payment_type_id uint64, user_id uint64, image string) {
 	var findone uint64 = 0
 	var pay_amount float64 = 0
 	current_date := time.Now().Local()
+
+	var new_file = ""
+
+	if image != "" {
+		var z = 0
+		//var ostypename = "http://192.168.60.191/icesystem/backend/web/uploads/"
+
+		// The path to the image you want to upload
+		imagePath := "./uploads/"
+
+		//fmt.Println(i, s)
+		z += 1
+		y := fmt.Sprintf("%v", z)
+
+		var b64 = image
+		dc, err := base64.StdEncoding.DecodeString(b64)
+		if err != nil {
+			panic(err)
+		}
+		new_file = strconv.FormatInt(time.Now().Unix(), 20) + y + ".jpg"
+
+		//f, err := os.Create("http://172.16.0.29/cicsupport/backend/web/uploads/myfilename.jpg")
+		f, err := os.OpenFile(imagePath+new_file, os.O_WRONLY|os.O_CREATE, 0777) //administrator@172.16.0.240/uploads
+		if err != nil {
+			panic(err)
+		}
+		//ostype := runtime.GOOS
+
+		//log.Print(ostype)
+
+		// f, err := os.OpenFile(ostypename+new_file, os.O_WRONLY|os.O_CREATE, 0777) //administrator@172.16.0.240/uploads
+		// if err != nil {
+		// 	panic(err)
+		// }
+
+		if _, err := f.Write(dc); err != nil {
+			panic(err)
+		}
+
+		defer f.Close()
+
+		sendFileToPHPServer(new_file)
+
+	}
 
 	recid := db.connect.Table("payment_receive").Where("customer_id = ?", customer_id).Where("date(trans_date) = ?", current_date.Format("2006-01-02")).Select("id").Take(&findone)
 	if recid != nil {
@@ -176,6 +229,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 				BranchId:   branch_id,
 				CratedBy:   user_id,
 				CreatedAt:  uint64(time.Now().Unix()),
+				SlipDoc:    new_file,
 			}
 			if payment.JournalNo != "error na ja" {
 				res := db.connect.Table("payment_receive").Create(&payment)
@@ -192,6 +246,55 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 	} else {
 		print("not have old payment data")
 	}
+}
+
+func sendFileToPHPServer(filename string) {
+	file, err := os.Open(filepath.Join("./uploads/", filename))
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+
+	// Prepare a multipart form file
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("image", filepath.Base(filename))
+	if err != nil {
+		fmt.Println("Error creating form file:", err)
+		return
+	}
+
+	_, err = io.Copy(part, file)
+	if err != nil {
+		fmt.Println("Error copying file:", err)
+		return
+	}
+
+	writer.Close()
+
+	// Send the file to the PHP server
+	req, err := http.NewRequest("POST", "http://192.168.60.191/icesystem/backend/web/index.php?r=site/uploadfromgo", body)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("PHP server responded with status:", resp.Status)
+		return
+	}
+
+	fmt.Println("File sent to PHP server successfully")
 }
 
 type MaxOrderNo struct {
@@ -814,6 +917,54 @@ func (db *orderRepository) GetReturnLastNo(company_id uint64, branch_id uint64) 
 	}
 
 	return prefix
+}
+
+func (db *UserConnect) UpdatePhoto(photo entity.SlipDoc, payment_id uint64) bool {
+	//	 var photo []
+	//var id int
+
+	var z = 0
+	var ostypename = ""
+	var new_file = ""
+	for _, s := range photo.Image {
+		//fmt.Println(i, s)
+		z += 1
+		y := fmt.Sprintf("%v", z)
+
+		var b64 = s
+		dc, err := base64.StdEncoding.DecodeString(b64)
+		if err != nil {
+			panic(err)
+		}
+		new_file = strconv.FormatInt(time.Now().Unix(), 20) + y + ".jpg"
+
+		//f, err := os.Create("http://172.16.0.29/cicsupport/backend/web/uploads/myfilename.jpg")
+
+		ostype := runtime.GOOS
+
+		log.Print(ostype)
+
+		f, err := os.OpenFile(ostypename+new_file, os.O_WRONLY|os.O_CREATE, 0777) //administrator@172.16.0.240/uploads
+		if err != nil {
+			panic(err)
+		}
+
+		defer f.Close()
+
+		if _, err := f.Write(dc); err != nil {
+			panic(err)
+		}
+
+		result := db.connect.Table("payment_receive").Where("id = ?", payment_id).Updates(map[string]interface{}{"slip_doc": new_file})
+		// result := db.connect.Table("person").Updates(map[string]interface{}{"photo": new_file})
+		if result.RowsAffected > 0 {
+			return true
+		} else {
+			return false
+		}
+
+	}
+	return true
 }
 
 func NewOrderRepository(db *gorm.DB) OrderRepository {

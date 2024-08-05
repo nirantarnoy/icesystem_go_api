@@ -12,4 +12,5 @@ type PaymentMaster struct {
 	BranchId   uint64    `json:"branch_id"`
 	CratedBy   uint64    `json:"crated_by"`
 	CreatedAt  uint64    `json:"created_at"`
+	SlipDoc    string    `json:"slip_doc"`
 }
