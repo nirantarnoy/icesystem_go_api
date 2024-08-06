@@ -274,7 +274,7 @@ func sendFileToPHPServer(filename string) {
 	writer.Close()
 
 	// Send the file to the PHP server
-	req, err := http.NewRequest("POST", "http://192.168.60.191/icesystem/backend/web/index.php?r=site/uploadfromgo", body)
+	req, err := http.NewRequest("POST", "http://141.98.19.240/icesystem/backend/web/index.php?r=site/uploadfromgo", body)
 	if err != nil {
 		fmt.Println("Error creating request:", err)
 		return
