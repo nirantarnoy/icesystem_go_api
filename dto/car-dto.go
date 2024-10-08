@@ -34,4 +34,5 @@ type OrderCreateDto struct {
 	OrderTotalAmount float64           `json:"order_total_amount"`
 	LoginShift       string            `json:"login_shift"`
 	Image            string            `json:"image"`
+	SaleTypeError    string            `json:"sale_type_error"`
 }
