@@ -36,4 +36,5 @@ type OrderCreate struct {
 	LoginShift       string            `json:"login_shift"`
 	Image            string            `json:"image"`
 	SaleTypeError    string            `json:"sale_type_error"`
+	CustomerName     string            `json:"customer_name"`
 }
