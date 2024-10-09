@@ -138,7 +138,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 		params.Add("company_id", strconv.Itoa(int(order.CompanyId)))
 		params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
 		params.Add("user_id", strconv.Itoa(int(order.UserId)))
-		params.Add("message", strconv.Itoa(int(order.SaleTypeError)))
+		params.Add("message", order.SaleTypeError)
 		params.Add("order_no", order.OrderNo)
 		params.Add("customer_name", order.CustomerName)
 		params.Add("order_no", order.OrderTotalAmount)
