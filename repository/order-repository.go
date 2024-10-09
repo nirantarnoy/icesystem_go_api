@@ -141,7 +141,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 		params.Add("message", order.SaleTypeError)
 		params.Add("order_no", order.OrderNo)
 		params.Add("customer_name", order.CustomerName)
-		params.Add("order_no", order.OrderTotalAmount)
+		params.Add("total_amount",strconv.Itoa(float64(order.OrderTotalAmount)))
 
 		resp, err := http.PostForm("http://141.98.19.240/icesystem/frontend/web/api/order/createnotifyerrorsaletype", params) // NKY
 		//resp, err := http.PostForm("http://103.253.73.108/icesystem/frontend/web/api/order/createnotifyclose", params) // NKY
