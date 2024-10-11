@@ -132,24 +132,24 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 		// 	db.connect.Table("orders").Where("id = ?", order_master.Id).Update("order_total_amt", order_total_amt)
 		// }
 
-    //    if(order.SaleTypeError != ""){ // send notification when has sale type error
-	// 	params := url.Values{}
-	// 	params.Add("route_id", strconv.Itoa(int(order.RouteId)))
-	// 	params.Add("company_id", strconv.Itoa(int(order.CompanyId)))
-	// 	params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
-	// 	params.Add("user_id", strconv.Itoa(int(order.UserId)))
-	// 	params.Add("message", order.SaleTypeError)
-	// 	params.Add("order_no", order.OrderNo)
-	// 	params.Add("customer_name", order.CustomerName)
-	// 	params.Add("total_amount",fmt.Sprintf("%f", order.OrderTotalAmount))
+       if(order.SaleTypeError != ""){ // send notification when has sale type error
+		params := url.Values{}
+		params.Add("route_id", strconv.Itoa(int(order.RouteId)))
+		params.Add("company_id", strconv.Itoa(int(order.CompanyId)))
+		params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
+		params.Add("user_id", strconv.Itoa(int(order.UserId)))
+		params.Add("message", order.SaleTypeError)
+		params.Add("order_no", order.OrderNo)
+		params.Add("customer_name", order.CustomerName)
+		params.Add("total_amount",fmt.Sprintf("%f", order.OrderTotalAmount))
 
-	// 	resp, err := http.PostForm("http://141.98.19.240/icesystem/frontend/web/api/order/createnotifyerrorsaletype", params) // NKY
-	// 	if err != nil {
-	// 		//panic("api error")
-	// 	}
+		resp, err := http.PostForm("http://141.98.19.240/icesystem/frontend/web/api/order/createnotifyerrorsaletype", params) // NKY
+		if err != nil {
+			//panic("api error")
+		}
 
-	// 	defer resp.Body.Close()
-	 //  }
+		defer resp.Body.Close()
+	  }
 
 	}
 	// tx.Commit()
