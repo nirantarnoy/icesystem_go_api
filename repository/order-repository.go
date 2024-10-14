@@ -133,7 +133,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 		// }
 
        if(order.SaleTypeError != ""){ // send notification when has sale type error
-		log.Println(order.SaleTypeError)
+		print("send notification when has sale type error")
 		params := url.Values{}
 		params.Add("route_id", strconv.Itoa(int(order.RouteId)))
 		params.Add("company_id", strconv.Itoa(int(order.CompanyId)))
