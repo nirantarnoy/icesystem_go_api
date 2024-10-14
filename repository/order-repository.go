@@ -132,7 +132,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 		// 	db.connect.Table("orders").Where("id = ?", order_master.Id).Update("order_total_amt", order_total_amt)
 		// }
 
-       if(order.SaleTypeError != ""){ // send notification when has sale type error
+       if(order.SaleTypeError != "" || order.SaleTypeError != nil){ // send notification when has sale type error
 		params := url.Values{}
 		params.Add("route_id", strconv.Itoa(int(order.RouteId)))
 		params.Add("company_id", strconv.Itoa(int(order.CompanyId)))
