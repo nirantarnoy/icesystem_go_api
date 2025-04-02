@@ -713,7 +713,7 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 
 	// send line notify
 
-	if resData > 0 {
+	/*if resData > 0 {
 		// client := resty.New()
 		// var result map[string]string
 		// json.Unmarshal([]byte(`{
@@ -742,7 +742,7 @@ func (db *orderRepository) CloseOrder(order entity.OrderClose) int {
 		}
 
 		defer resp.Body.Close()
-	}
+	} */
 
 	return resData
 }
