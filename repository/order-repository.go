@@ -122,10 +122,19 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 
 			res2 := db.connect.Table("order_line").Create(&orderdetail)
 			if res2.RowsAffected > 0 {
+				log.Printf("[CreateOrder] created order line product_id=%d qty=%.2f", data[i].ProductId, data[i].Qty)
 				if order.PaymentTypeId != 3 {
 					db.AddPayment(uint64(order_master.Id), order.CustomerId, orderdetail.LineTotal, uint64(order.CompanyId), order.BranchId, uint64(orderdetail.SalePaymentMethodId), order.UserId, order.Image)
 				}
-				db.UpdateStock(order.RouteId, uint64(data[i].ProductId), data[i].Qty)
+				//db.UpdateStock(order.RouteId, uint64(data[i].ProductId), data[i].Qty)
+
+				if err := db.UpdateStock(order.RouteId, uint64(data[i].ProductId), data[i].Qty); err != nil {
+					log.Printf("[CreateOrder] UpdateStock failed: %v", err)
+				} else {
+					log.Printf("[CreateOrder] UpdateStock success: route_id=%d, product_id=%d, qty=%.2f", order.RouteId, data[i].ProductId, data[i].Qty)
+				}
+			}else{
+				log.Printf("[CreateOrder] failed to create order line product_id=%d qty=%.2f", data[i].ProductId, data[i].Qty)
 			}
 		}
 		// if order_total_amt > 0 {
