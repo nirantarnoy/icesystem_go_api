@@ -132,29 +132,29 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 		// 	db.connect.Table("orders").Where("id = ?", order_master.Id).Update("order_total_amt", order_total_amt)
 		// }
 
-    //    if(order.SaleTypeError != ""){ // send notification when has sale type error
-	// 	print("send notification when has sale type error")
-	// 	params := url.Values{}
-	// 	params.Add("route_id", strconv.Itoa(int(order.RouteId)))
-	// 	params.Add("company_id", strconv.Itoa(int(order.CompanyId)))
-	// 	params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
-	// 	params.Add("user_id", strconv.Itoa(int(order.UserId)))
-	// 	params.Add("message", order.SaleTypeError)
-	// 	params.Add("order_no", order.OrderNo)
-	// 	params.Add("customer_name", order.CustomerName)
-	// 	params.Add("total_amount",fmt.Sprintf("%f", order.OrderTotalAmount))
+       if(order.SaleTypeError != ""){ // send notification when has sale type error
+		print("send notification when has sale type error")
+		params := url.Values{}
+		params.Add("route_id", strconv.Itoa(int(order.RouteId)))
+		params.Add("company_id", strconv.Itoa(int(order.CompanyId)))
+		params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
+		params.Add("user_id", strconv.Itoa(int(order.UserId)))
+		params.Add("message", order.SaleTypeError)
+		params.Add("order_no", order.OrderNo)
+		params.Add("customer_name", order.CustomerName)
+		params.Add("total_amount",fmt.Sprintf("%f", order.OrderTotalAmount))
 
-	// 	resp, err := http.PostForm("http://141.98.19.240/icesystem/frontend/web/api/order/createnotifyerrorsaletype", params) // NKY
-	// 	if err != nil {
-	// 		//panic("api error")
-	// 	}
+		resp, err := http.PostForm("http://141.98.19.240/icesystem/frontend/web/api/order/createnotifyerrorsaletype", params) // NKY
+		if err != nil {
+			//panic("api error")
+		}
 
-	// 	defer resp.Body.Close()
-	//   } 
+		defer resp.Body.Close()
+	  } 
 
 	}
 
-    if(order.SaleTypeError != ""){ // send notification when has sale type error
+  /*  if(order.SaleTypeError != ""){ // send notification when has sale type error
 		print("send notification when has sale type error")
 		params := url.Values{}
 		params.Add("route_id", strconv.Itoa(int(order.RouteId)))
@@ -172,7 +172,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 		}
 
 		defer resp.Body.Close()
-	} 
+	} */
 
 	// tx.Commit()
 
@@ -185,18 +185,50 @@ type SelectedData struct {
 	AvlQty    float64 `json:"avl_qty"`
 }
 
-func (db *orderRepository) UpdateStock(route_id uint64, product_id uint64, qty float64) {
+// func (db *orderRepository) UpdateStock(route_id uint64, product_id uint64, qty float64) {
+// 	var selectedData SelectedData
+// 	//	res := db.connect.Table("order_stock").Where("route_id =?", route_id).Where("product_id = ?", product_id).Where("avl_qty >= ?", qty).Where("order_id = 202653").Select("id,product_id,avl_qty").Scan(&selectedData)
+// 	res := db.connect.Table("order_stock").Where("route_id =?", route_id).Where("product_id = ?", product_id).Where("avl_qty >= ?", qty).Select("id,product_id,avl_qty").Scan(&selectedData)
+// 	if res.Error == nil {
+// 		res_update := db.connect.Table("order_stock").Where("id=?", selectedData.Id).Update("avl_qty", (selectedData.AvlQty - qty))
+// 		if res_update.Error == nil {
+// 			print("update stock ok")
+// 			// print(selectedData.ProductId)
+// 		}
+// 	}
+// }
+
+func (db *orderRepository) UpdateStock(route_id uint64, product_id uint64, qty float64) error {
 	var selectedData SelectedData
-	//	res := db.connect.Table("order_stock").Where("route_id =?", route_id).Where("product_id = ?", product_id).Where("avl_qty >= ?", qty).Where("order_id = 202653").Select("id,product_id,avl_qty").Scan(&selectedData)
-	res := db.connect.Table("order_stock").Where("route_id =?", route_id).Where("product_id = ?", product_id).Where("avl_qty >= ?", qty).Select("id,product_id,avl_qty").Scan(&selectedData)
-	if res.Error == nil {
-		res_update := db.connect.Table("order_stock").Where("id=?", selectedData.Id).Update("avl_qty", (selectedData.AvlQty - qty))
-		if res_update.Error == nil {
-			print("update stock ok")
-			// print(selectedData.ProductId)
-		}
+
+	tx := db.connect.Begin() // 🔒 เริ่ม transaction
+
+	if err := tx.Table("order_stock").
+		Where("route_id = ?", route_id).
+		Where("product_id = ?", product_id).
+		Where("avl_qty >= ?", qty).
+		Select("id, product_id, avl_qty").
+		Scan(&selectedData).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("stock not found or insufficient: %v", err)
 	}
+
+	if selectedData.Id == 0 {
+		tx.Rollback()
+		return fmt.Errorf("no stock available for product %d", product_id)
+	}
+
+	// 🔄 อัปเดตแบบ atomic ปลอดภัยกว่า
+	if err := tx.Table("order_stock").
+		Where("id = ? AND avl_qty >= ?", selectedData.Id, qty).
+		UpdateColumn("avl_qty", gorm.Expr("avl_qty - ?", qty)).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("update failed: %v", err)
+	}
+
+	return tx.Commit().Error
 }
+
 
 func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amount float64, company_id uint64, branch_id uint64, payment_type_id uint64, user_id uint64, image string) {
 	var findone uint64 = 0
