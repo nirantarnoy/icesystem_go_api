@@ -194,40 +194,51 @@ type SelectedData struct {
 	AvlQty    float64 `json:"avl_qty"`
 }
 
-// func (db *orderRepository) UpdateStock(route_id uint64, product_id uint64, qty float64) {
-// 	var selectedData SelectedData
-// 	//	res := db.connect.Table("order_stock").Where("route_id =?", route_id).Where("product_id = ?", product_id).Where("avl_qty >= ?", qty).Where("order_id = 202653").Select("id,product_id,avl_qty").Scan(&selectedData)
-// 	res := db.connect.Table("order_stock").Where("route_id =?", route_id).Where("product_id = ?", product_id).Where("avl_qty >= ?", qty).Select("id,product_id,avl_qty").Scan(&selectedData)
-// 	if res.Error == nil {
-// 		res_update := db.connect.Table("order_stock").Where("id=?", selectedData.Id).Update("avl_qty", (selectedData.AvlQty - qty))
-// 		if res_update.Error == nil {
-// 			print("update stock ok")
-// 			// print(selectedData.ProductId)
-// 		}
-// 	}
-// }
-
 func (db *orderRepository) UpdateStock(route_id uint64, product_id uint64, qty float64) error {
 	var selectedData SelectedData
 
+	currentDate := time.Now().Local()
+	yesterday := currentDate.AddDate(0, 0, -1)
+
 	tx := db.connect.Begin() // 🔒 เริ่ม transaction
 
-	if err := tx.Table("order_stock").
+	// 🕒 พยายามหาข้อมูลของวันนี้ก่อน
+	err := tx.Table("order_stock").
 		Where("route_id = ?", route_id).
 		Where("product_id = ?", product_id).
+		Where("DATE(trans_date) = ?", currentDate.Format("2006-01-02")).
 		Where("avl_qty >= ?", qty).
 		Select("id, product_id, avl_qty").
-		Scan(&selectedData).Error; err != nil {
+		Scan(&selectedData).Error
+
+	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("stock not found or insufficient: %v", err)
+		return fmt.Errorf("error finding stock: %v", err)
 	}
 
+	// ถ้าไม่พบข้อมูลวันนี้ → ลองย้อนหลัง 1 วัน
+	if selectedData.Id == 0 {
+		err = tx.Table("order_stock").
+			Where("route_id = ?", route_id).
+			Where("product_id = ?", product_id).
+			Where("DATE(trans_date) = ?", yesterday.Format("2006-01-02")).
+			Where("avl_qty >= ?", qty).
+			Select("id, product_id, avl_qty").
+			Scan(&selectedData).Error
+
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("error finding yesterday stock: %v", err)
+		}
+	}
+
+	// ถ้าไม่เจอทั้งวันนี้และเมื่อวาน
 	if selectedData.Id == 0 {
 		tx.Rollback()
-		return fmt.Errorf("no stock available for product %d", product_id)
+		return fmt.Errorf("no stock available for product %d (today or yesterday)", product_id)
 	}
 
-	// 🔄 อัปเดตแบบ atomic ปลอดภัยกว่า
+	// 🔄 อัปเดตแบบ atomic
 	if err := tx.Table("order_stock").
 		Where("id = ? AND avl_qty >= ?", selectedData.Id, qty).
 		UpdateColumn("avl_qty", gorm.Expr("avl_qty - ?", qty)).Error; err != nil {
@@ -237,6 +248,41 @@ func (db *orderRepository) UpdateStock(route_id uint64, product_id uint64, qty f
 
 	return tx.Commit().Error
 }
+
+
+// func (db *orderRepository) UpdateStock(route_id uint64, product_id uint64, qty float64) error {
+// 	var selectedData SelectedData
+
+// 	current_date := time.Now().Local()
+
+// 	tx := db.connect.Begin() // 🔒 เริ่ม transaction
+
+// 	if err := tx.Table("order_stock").
+// 		Where("route_id = ?", route_id).
+// 		Where("product_id = ?", product_id).
+// 		Where("DATE(trans_date) = ?", current_date.Format("2006-01-02")).
+// 		Where("avl_qty >= ?", qty).
+// 		Select("id, product_id, avl_qty").
+// 		Scan(&selectedData).Error; err != nil {
+// 		tx.Rollback()
+// 		return fmt.Errorf("stock not found or insufficient: %v", err)
+// 	}
+
+// 	if selectedData.Id == 0 {
+// 		tx.Rollback()
+// 		return fmt.Errorf("no stock available for product %d", product_id)
+// 	}
+
+// 	// 🔄 อัปเดตแบบ atomic ปลอดภัยกว่า
+// 	if err := tx.Table("order_stock").
+// 		Where("id = ? AND avl_qty >= ?", selectedData.Id, qty).
+// 		UpdateColumn("avl_qty", gorm.Expr("avl_qty - ?", qty)).Error; err != nil {
+// 		tx.Rollback()
+// 		return fmt.Errorf("update failed: %v", err)
+// 	}
+
+// 	return tx.Commit().Error
+// }
 
 
 func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amount float64, company_id uint64, branch_id uint64, payment_type_id uint64, user_id uint64, image string) {

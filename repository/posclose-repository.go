@@ -113,11 +113,11 @@ func (db *posCloseRepository) CloseOrder(closeData entity.PosCloseData) entity.P
 				}
 
 				if resline.RowsAffected > 0 {
-					create_stock_result := make(chan bool)
+					create_stock_result := make(chan bool) // create stock with go routine
 					go db.CreateStockTrans(posHeader.OrderNo, x.ProductId, x.Qty, closeData.WarehouseId, posHeader.Id, closeData.UserId, closeData.CompanyID, closeData.BranchId, create_stock_result)
 					//fmt.Println(<-create_stock_result)
 
-					update_result := make(chan bool)
+					update_result := make(chan bool) // update summary with go routine
 					go db.UpdateSummary(x.ProductId, closeData.WarehouseId, x.Qty, update_result)
 					//fmt.Sprintln(<-update_result)
 
