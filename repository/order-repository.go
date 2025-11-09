@@ -298,7 +298,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 		//var ostypename = "http://192.168.60.191/icesystem/backend/web/uploads/"
 
 		// The path to the image you want to upload
-		imagePath := "./uploads/"
+		imagePath := "/var/www/html/cicsystem/backend/web/uploads/files/receive/"
 
 		//fmt.Println(i, s)
 		z += 1
@@ -379,34 +379,44 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 }
 
 func sendFileToPHPServer(filename string) {
-	file, err := os.Open(filepath.Join("./uploads/", filename))
+	// 📁 Path ไฟล์จริงที่เพิ่งบันทึกไว้
+	filePath := filepath.Join("/var/www/html/cicsystem/backend/web/uploads/files/receive/", filename)
+
+	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		fmt.Println("❌ Error opening file:", err)
 		return
 	}
 	defer file.Close()
 
-	// Prepare a multipart form file
+	// 🧩 สร้าง multipart form
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
+
+	// form field name ต้องตรงกับ PHP ($_FILES['image'])
 	part, err := writer.CreateFormFile("image", filepath.Base(filename))
 	if err != nil {
-		fmt.Println("Error creating form file:", err)
+		fmt.Println("❌ Error creating form file:", err)
 		return
 	}
 
-	_, err = io.Copy(part, file)
-	if err != nil {
-		fmt.Println("Error copying file:", err)
+	// คัดลอกข้อมูลไฟล์ใส่ body
+	if _, err = io.Copy(part, file); err != nil {
+		fmt.Println("❌ Error copying file:", err)
 		return
 	}
+
+	// ✅ เพิ่ม field อื่น ๆ (option) เช่น ชื่อไฟล์, token, หรือ ID
+	_ = writer.WriteField("filename", filename)
+	// _ = writer.WriteField("auth_key", "YOUR_TOKEN_IF_NEEDED")
 
 	writer.Close()
 
-	// Send the file to the PHP server
-	req, err := http.NewRequest("POST", "http://141.98.19.240/icesystem/backend/web/index.php?r=site/uploadfromgo", body)
+	// 🌐 ส่งไฟล์ไปยัง PHP endpoint
+	uploadURL := "http://141.98.19.240/icesystem/backend/web/index.php?r=site/uploadfromgo"
+	req, err := http.NewRequest("POST", uploadURL, body)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("❌ Error creating request:", err)
 		return
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -414,17 +424,19 @@ func sendFileToPHPServer(filename string) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		fmt.Println("❌ Error sending request:", err)
 		return
 	}
 	defer resp.Body.Close()
 
+	// ✅ ตรวจสอบ response
+	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("PHP server responded with status:", resp.Status)
+		fmt.Printf("⚠️ PHP server responded: %s\n%s\n", resp.Status, string(respBody))
 		return
 	}
 
-	fmt.Println("File sent to PHP server successfully")
+	fmt.Println("✅ File sent to PHP server successfully")
 }
 
 
