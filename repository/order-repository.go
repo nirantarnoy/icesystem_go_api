@@ -298,7 +298,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 		//var ostypename = "http://192.168.60.191/icesystem/backend/web/uploads/"
 
 		// The path to the image you want to upload
-		imagePath := "/var/www/html/cicsystem/backend/web/uploads/files/receive/"
+		imagePath := "/var/www/html/icesystem/backend/web/uploads/files/receive/"
 
 		//fmt.Println(i, s)
 		z += 1
@@ -314,7 +314,8 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 		//f, err := os.Create("http://172.16.0.29/cicsupport/backend/web/uploads/myfilename.jpg")
 		f, err := os.OpenFile(imagePath+new_file, os.O_WRONLY|os.O_CREATE, 0777) //administrator@172.16.0.240/uploads
 		if err != nil {
-			panic(err)
+			panic(err);
+			print("create file error");
 		}
 		//ostype := runtime.GOOS
 
@@ -380,7 +381,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 
 func sendFileToPHPServer(filename string) {
 	// 📁 Path ไฟล์จริงที่เพิ่งบันทึกไว้
-	filePath := filepath.Join("/var/www/html/cicsystem/backend/web/uploads/files/receive/", filename)
+	filePath := filepath.Join("/var/www/html/icesystem/backend/web/uploads/files/receive/", filename)
 
 	file, err := os.Open(filePath)
 	if err != nil {
