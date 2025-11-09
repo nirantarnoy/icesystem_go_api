@@ -293,6 +293,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 	var new_file = ""
 
 	if image != "" {
+		print("has photo");
 		var z = 0
 		//var ostypename = "http://192.168.60.191/icesystem/backend/web/uploads/"
 
