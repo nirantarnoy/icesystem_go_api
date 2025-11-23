@@ -107,6 +107,11 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 				is_free = 1
 			}
 
+			var payment_method_new_id =int64(order.PaymentTypeId)
+			if(order.Image == null){
+				payment_method_new_id = 4
+			}
+
 			var orderdetail entity.OrderDetail
 			orderdetail.OrderId = order_master.Id
 			orderdetail.CustomerId = int64(order.CustomerId)
@@ -116,7 +121,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 			orderdetail.LineTotal = line_total
 			orderdetail.PriceGroupId = int64(data[i].PriceGroupId)
 			orderdetail.Status = 1
-			orderdetail.SalePaymentMethodId = order.Image == null ? int64(order.PaymentTypeId) : 4
+			orderdetail.SalePaymentMethodId =  payment_method_new_id
 			orderdetail.IssueRefId = int64(order.IssueId)
 			orderdetail.IsFree = int64(is_free)
 
