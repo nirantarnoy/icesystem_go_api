@@ -364,7 +364,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 				SlipDoc:    new_file,
 			}
 			if(new_file!='' || new_file !=null){
-				is_cash_transfer_payment = 2
+				is_cash_transfer_payment = 4
 			}
 			if payment.JournalNo != "error na ja" {
 				res := db.connect.Table("payment_receive").Create(&payment)
