@@ -108,7 +108,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 			}
 
 			var payment_method_new_id =int64(order.PaymentTypeId)
-			if(order.Image == null){
+			if(order.Image != ""){
 				payment_method_new_id = 4
 			}
 
@@ -368,7 +368,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 				CreatedAt:  uint64(time.Now().Unix()),
 				SlipDoc:    new_file,
 			}
-			if(new_file!='' || new_file !=null){
+			if(new_file !=""){
 				is_cash_transfer_payment = 4
 			}
 			if payment.JournalNo != "error na ja" {
