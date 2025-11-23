@@ -116,7 +116,7 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 			orderdetail.LineTotal = line_total
 			orderdetail.PriceGroupId = int64(data[i].PriceGroupId)
 			orderdetail.Status = 1
-			orderdetail.SalePaymentMethodId = int64(order.PaymentTypeId)
+			orderdetail.SalePaymentMethodId = order.Image == null ? int64(order.PaymentTypeId) : 4
 			orderdetail.IssueRefId = int64(order.IssueId)
 			orderdetail.IsFree = int64(is_free)
 
@@ -291,6 +291,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 	current_date := time.Now().Local()
 
 	var new_file = ""
+	var is_cash_transfer_payment = 1; // 1 cash, 2 transfer
 
 	if image != "" {
 		print("has photo");
@@ -362,10 +363,13 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 				CreatedAt:  uint64(time.Now().Unix()),
 				SlipDoc:    new_file,
 			}
+			if(new_file!='' || new_file !=null){
+				is_cash_transfer_payment = 2
+			}
 			if payment.JournalNo != "error na ja" {
 				res := db.connect.Table("payment_receive").Create(&payment)
 				if res.Error == nil {
-					res_save_detail := db.connect.Table("payment_receive_line").Create(map[string]interface{}{"payment_receive_id": payment.Id, "order_id": order_id, "payment_amount": pay_amount, "payment_channel_id": 1, "payment_method_id": payment_type_id, "status": 1, "payment_type_id": payment_type_id})
+					res_save_detail := db.connect.Table("payment_receive_line").Create(map[string]interface{}{"payment_receive_id": payment.Id, "order_id": order_id, "payment_amount": pay_amount, "payment_channel_id": is_cash_transfer_payment, "payment_method_id": payment_type_id, "status": 1, "payment_type_id": payment_type_id})
 					if res_save_detail.Error == nil {
 						print("create payment")
 					}
