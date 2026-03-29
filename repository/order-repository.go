@@ -19,6 +19,8 @@ import (
 	"tarlek.com/icesystem/entity"
 )
 
+const remoteServerHost = "http://141.98.19.240"
+
 type OrderRepository interface {
 	CreateOrder(order entity.OrderCreate) entity.OrderCreate
 	CloseOrder(order entity.OrderClose) int
@@ -84,109 +86,103 @@ func (db *orderRepository) CreateOrder(order entity.OrderCreate) entity.OrderCre
 	order_master.PaymentMethodId = int64(order.PaymentTypeId)
 	order_master.OrderTotalAmt = order.OrderTotalAmount
 
-	//tx := db.connect.Begin()
+	tx := db.connect.Begin()
+	if tx.Error != nil {
+		log.Printf("[CreateOrder] failed to begin transaction: %v", tx.Error)
+		return order
+	}
 
-	res := db.connect.Table("orders").Create(&order_master) // save and return id
-	if res.RowsAffected > 0 {
-		//print(res.RowsAffected)
-		//print(order_master.Id)
+	if err := tx.Table("orders").Create(&order_master).Error; err != nil {
+		tx.Rollback()
+		log.Printf("[CreateOrder] failed to create order master: %v", err)
+		return order
+	}
 
-		for i := 0; i <= len(data)-1; i++ {
-			//print(data[0].ProductId)
-			if data[i].Qty <= 0 {
-				continue
+	orderLines := make([]entity.OrderDetail, 0, len(data))
+	for i := range data {
+		if data[i].Qty <= 0 {
+			continue
+		}
+
+		line_total := (data[i].Qty * data[i].Price)
+		var is_free int = 0
+		if order.PaymentTypeId == 3 {
+			is_free = 1
+		}
+
+		var payment_method_new_id = int64(order.PaymentTypeId)
+		if order.Image != "" {
+			payment_method_new_id = 4
+		}
+
+		orderdetail := entity.OrderDetail{
+			OrderId:              order_master.Id,
+			CustomerId:           int64(order.CustomerId),
+			ProductId:            int64(data[i].ProductId),
+			Qty:                  data[i].Qty,
+			Price:                data[i].Price,
+			LineTotal:            line_total,
+			PriceGroupId:         int64(data[i].PriceGroupId),
+			Status:               1,
+			SalePaymentMethodId:  payment_method_new_id,
+			IssueRefId:           int64(order.IssueId),
+			IsFree:               int64(is_free),
+		}
+		orderLines = append(orderLines, orderdetail)
+	}
+
+	if len(orderLines) > 0 {
+		if err := tx.Table("order_line").Create(&orderLines).Error; err != nil {
+			tx.Rollback()
+			log.Printf("[CreateOrder] failed to batch create order lines: %v", err)
+			return order
+		}
+
+		// Perform operations that don't strictly require being inside the DB transaction (like stock/payment)
+		// but since UpdateStock has its own inner transaction, we should be careful.
+		// For now, we process them sequentially but after the bulk insert to minimize wait time on master record.
+		for _, line := range orderLines {
+			if order.PaymentTypeId != 3 {
+				db.AddPayment(uint64(order_master.Id), order.CustomerId, line.LineTotal, uint64(order.CompanyId), order.BranchId, uint64(line.SalePaymentMethodId), order.UserId, order.Image)
 			}
-			line_total := (data[i].Qty * data[i].Price)
-			//order_total_amt += line_total
 
-			// var line_price float64 = 0
-			// var line_total_price float64 = 0
-			var is_free int = 0
-
-			if order.PaymentTypeId == 3 {
-				is_free = 1
-			}
-
-			var payment_method_new_id =int64(order.PaymentTypeId)
-			if(order.Image != ""){
-				payment_method_new_id = 4
-			}
-
-			var orderdetail entity.OrderDetail
-			orderdetail.OrderId = order_master.Id
-			orderdetail.CustomerId = int64(order.CustomerId)
-			orderdetail.ProductId = int64(data[i].ProductId)
-			orderdetail.Qty = data[i].Qty
-			orderdetail.Price = data[i].Price
-			orderdetail.LineTotal = line_total
-			orderdetail.PriceGroupId = int64(data[i].PriceGroupId)
-			orderdetail.Status = 1
-			orderdetail.SalePaymentMethodId =  payment_method_new_id
-			orderdetail.IssueRefId = int64(order.IssueId)
-			orderdetail.IsFree = int64(is_free)
-
-			res2 := db.connect.Table("order_line").Create(&orderdetail)
-			if res2.RowsAffected > 0 {
-				log.Printf("[CreateOrder] created order line product_id=%d qty=%.2f", data[i].ProductId, data[i].Qty)
-				if order.PaymentTypeId != 3 {
-					db.AddPayment(uint64(order_master.Id), order.CustomerId, orderdetail.LineTotal, uint64(order.CompanyId), order.BranchId, uint64(orderdetail.SalePaymentMethodId), order.UserId, order.Image)
-				}
-				//db.UpdateStock(order.RouteId, uint64(data[i].ProductId), data[i].Qty)
-
-				if err := db.UpdateStock(order.RouteId, uint64(data[i].ProductId), data[i].Qty); err != nil {
-					log.Printf("[CreateOrder] UpdateStock failed: %v", err)
-				} else {
-					log.Printf("[CreateOrder] UpdateStock success: route_id=%d, product_id=%d, qty=%.2f", order.RouteId, data[i].ProductId, data[i].Qty)
-				}
-			}else{
-				log.Printf("[CreateOrder] failed to create order line product_id=%d qty=%.2f", data[i].ProductId, data[i].Qty)
+			if err := db.UpdateStock(order.RouteId, uint64(line.ProductId), line.Qty); err != nil {
+				log.Printf("[CreateOrder] UpdateStock failed: %v", err)
 			}
 		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Printf("[CreateOrder] failed to commit transaction: %v", err)
+		return order
+	}
 		// if order_total_amt > 0 {
 		// 	db.connect.Table("orders").Where("id = ?", order_master.Id).Update("order_total_amt", order_total_amt)
 		// }
 
-       if(order.SaleTypeError != ""){ // send notification when has sale type error
-		print("send notification when has sale type error")
-		params := url.Values{}
-		params.Add("route_id", strconv.Itoa(int(order.RouteId)))
-		params.Add("company_id", strconv.Itoa(int(order.CompanyId)))
-		params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
-		params.Add("user_id", strconv.Itoa(int(order.UserId)))
-		params.Add("message", order.SaleTypeError)
-		params.Add("order_no", order.OrderNo)
-		params.Add("customer_name", order.CustomerName)
-		params.Add("total_amount",fmt.Sprintf("%f", order.OrderTotalAmount))
+       if order.SaleTypeError != "" { // send notification when has sale type error
+		log.Println("[CreateOrder] sending notification for sale type error")
+		go func(order entity.OrderCreate) {
+			params := url.Values{}
+			params.Add("route_id", strconv.Itoa(int(order.RouteId)))
+			params.Add("company_id", strconv.Itoa(int(order.CompanyId)))
+			params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
+			params.Add("user_id", strconv.Itoa(int(order.UserId)))
+			params.Add("message", order.SaleTypeError)
+			params.Add("order_no", order.OrderNo)
+			params.Add("customer_name", order.CustomerName)
+			params.Add("total_amount", fmt.Sprintf("%f", order.OrderTotalAmount))
 
-		resp, err := http.PostForm("http://141.98.19.240/icesystem/frontend/web/api/order/createnotifyerrorsaletype", params) // NKY
-		if err != nil {
-			//panic("api error")
-		}
-
-		defer resp.Body.Close()
-	  } 
-
-	}
-
-  /*  if(order.SaleTypeError != ""){ // send notification when has sale type error
-		print("send notification when has sale type error")
-		params := url.Values{}
-		params.Add("route_id", strconv.Itoa(int(order.RouteId)))
-		params.Add("company_id", strconv.Itoa(int(order.CompanyId)))
-		params.Add("branch_id", strconv.Itoa(int(order.BranchId)))
-		params.Add("user_id", strconv.Itoa(int(order.UserId)))
-		params.Add("message", order.SaleTypeError)
-		params.Add("order_no", order.OrderNo)
-		params.Add("customer_name", order.CustomerName)
-		params.Add("total_amount",fmt.Sprintf("%f", order.OrderTotalAmount))
-
-		resp, err := http.PostForm("http://141.98.19.240/icesystem/frontend/web/api/order/createnotifyerrorsaletype", params) // NKY
-		if err != nil {
-			panic("api error")
-		}
-
-		defer resp.Body.Close()
-	} */
+			notificationURL := remoteServerHost + "/icesystem/frontend/web/api/order/createnotifyerrorsaletype"
+			resp, err := http.PostForm(notificationURL, params) // NKY
+			if err != nil {
+				log.Printf("[CreateOrder] notification api error: %v", err)
+				return
+			}
+			defer resp.Body.Close()
+			log.Printf("[CreateOrder] notification sent, status: %s", resp.Status)
+		}(order)
+	} 
 
 	// tx.Commit()
 
@@ -338,7 +334,7 @@ func (db *orderRepository) AddPayment(order_id uint64, customer_id uint64, amoun
 
 		defer f.Close()
 
-		sendFileToPHPServer(new_file)
+		go sendFileToPHPServer(new_file)
 
 	}
 
@@ -452,7 +448,7 @@ func sendFileToPHPServer(filename string) {
 	writer.Close()
 
 	// 🌐 ส่งไฟล์ไปยัง PHP endpoint
-	uploadURL := "http://141.98.19.240/icesystem/backend/web/index.php?r=site/uploadfromgo"
+	uploadURL := remoteServerHost + "/icesystem/backend/web/index.php?r=site/uploadfromgo"
 	req, err := http.NewRequest("POST", uploadURL, body)
 	if err != nil {
 		fmt.Println("❌ Error creating request:", err)
